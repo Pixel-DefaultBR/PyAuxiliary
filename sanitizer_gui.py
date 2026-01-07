@@ -3,8 +3,12 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 import re
+import json
+from pathlib import Path
 from typing import List, Set, Dict
-from sanitize_soc_logs import SOCLogSanitizer
+
+
+CONFIG_FILE = Path.home() / '.soc_sanitizer_config.json'
 
 
 class ColorTheme:
@@ -117,6 +121,7 @@ class SanitizerGUI:
         self.root = root
         self.root.title("SOC Log Sanitizer - Interface Grafica")
         self.root.geometry("1200x800")
+        self.root.minsize(900, 600)
 
         self.sanitize_email = tk.BooleanVar(value=True)
         self.sanitize_ipv4 = tk.BooleanVar(value=True)
@@ -133,8 +138,38 @@ class SanitizerGUI:
 
         self.custom_clients_list: List[str] = []
 
+        self.load_config()
+
         self.setup_ui()
-        self.apply_theme('Azul')
+        self.apply_theme(self.current_theme.get())
+
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def load_config(self):
+        try:
+            if CONFIG_FILE.exists():
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.custom_clients_list = config.get('custom_clients', [])
+                    theme = config.get('theme', 'Azul')
+                    self.current_theme.set(theme)
+        except Exception as e:
+            print(f"Erro ao carregar configuracao: {e}")
+
+    def save_config(self):
+        try:
+            config = {
+                'custom_clients': self.custom_clients_list,
+                'theme': self.current_theme.get()
+            }
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Erro ao salvar configuracao: {e}")
+
+    def on_close(self):
+        self.save_config()
+        self.root.destroy()
 
     def setup_ui(self):
         self.root.grid_rowconfigure(1, weight=1)
@@ -180,8 +215,8 @@ class SanitizerGUI:
 
         text_frame = ttk.Frame(main_frame)
         text_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
-        text_frame.grid_rowconfigure(0, weight=1)
-        text_frame.grid_rowconfigure(2, weight=1)
+        text_frame.grid_rowconfigure(1, weight=1)
+        text_frame.grid_rowconfigure(4, weight=1)
         text_frame.grid_columnconfigure(0, weight=1)
 
         self.input_label = ttk.Label(text_frame, text="Texto Original:", font=("Arial", 11, "bold"))
@@ -204,21 +239,21 @@ class SanitizerGUI:
             text="Sanitizar Texto",
             command=self.sanitize_text
         )
-        self.sanitize_btn.pack(side=tk.LEFT, padx=5)
+        self.sanitize_btn.grid(row=0, column=0, padx=5)
 
         self.clear_btn = ttk.Button(
             buttons_frame,
             text="Limpar Tudo",
             command=self.clear_all
         )
-        self.clear_btn.pack(side=tk.LEFT, padx=5)
+        self.clear_btn.grid(row=0, column=1, padx=5)
 
         self.load_file_btn = ttk.Button(
             buttons_frame,
             text="Carregar Arquivo",
             command=self.load_file
         )
-        self.load_file_btn.pack(side=tk.LEFT, padx=5)
+        self.load_file_btn.grid(row=0, column=2, padx=5)
 
         self.output_label = ttk.Label(text_frame, text="Texto Sanitizado:", font=("Arial", 11, "bold"))
         self.output_label.grid(row=3, column=0, sticky=tk.W, pady=(10, 5))
@@ -240,20 +275,39 @@ class SanitizerGUI:
             text="Copiar para Area de Transferencia",
             command=self.copy_to_clipboard
         )
-        self.copy_btn.pack(side=tk.LEFT, padx=5)
+        self.copy_btn.grid(row=0, column=0, padx=5)
 
         self.save_btn = ttk.Button(
             output_buttons_frame,
             text="Salvar em Arquivo",
             command=self.save_to_file
         )
-        self.save_btn.pack(side=tk.LEFT, padx=5)
+        self.save_btn.grid(row=0, column=1, padx=5)
 
-        options_frame = ttk.Frame(main_frame)
-        options_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
+        options_container = ttk.Frame(main_frame)
+        options_container.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5)
+        options_container.grid_rowconfigure(0, weight=1)
+        options_container.grid_columnconfigure(0, weight=1)
 
-        self.checkbox_frame = ttk.LabelFrame(options_frame, text="Selecione o que Sanitizar", padding="10")
-        self.checkbox_frame.pack(fill=tk.X, pady=5)
+        canvas = tk.Canvas(options_container)
+        scrollbar = ttk.Scrollbar(options_container, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        self.canvas = canvas
+
+        self.checkbox_frame = ttk.LabelFrame(self.scrollable_frame, text="Selecione o que Sanitizar", padding="10")
+        self.checkbox_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Checkbutton(
             self.checkbox_frame,
@@ -315,11 +369,11 @@ class SanitizerGUI:
         ).pack(side=tk.LEFT, padx=2)
 
         self.custom_clients_frame = ttk.LabelFrame(
-            options_frame,
+            self.scrollable_frame,
             text="Clientes/Termos Personalizados",
             padding="10"
         )
-        self.custom_clients_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        self.custom_clients_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
 
         ttk.Label(
             self.custom_clients_frame,
@@ -350,17 +404,20 @@ class SanitizerGUI:
         list_frame = ttk.Frame(self.custom_clients_frame)
         list_frame.pack(fill=tk.BOTH, expand=True)
 
-        scrollbar = ttk.Scrollbar(list_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        list_scrollbar = ttk.Scrollbar(list_frame)
+        list_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.clients_listbox = tk.Listbox(
             list_frame,
             height=8,
-            yscrollcommand=scrollbar.set,
+            yscrollcommand=list_scrollbar.set,
             font=("Arial", 9)
         )
         self.clients_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.clients_listbox.yview)
+        list_scrollbar.config(command=self.clients_listbox.yview)
+
+        for client in self.custom_clients_list:
+            self.clients_listbox.insert(tk.END, client)
 
         ttk.Button(
             self.custom_clients_frame,
@@ -368,8 +425,8 @@ class SanitizerGUI:
             command=self.remove_custom_client
         ).pack(pady=(5, 0))
 
-        self.advanced_frame = ttk.LabelFrame(options_frame, text="Opcoes Avancadas", padding="10")
-        self.advanced_frame.pack(fill=tk.X, pady=5)
+        self.advanced_frame = ttk.LabelFrame(self.scrollable_frame, text="Opcoes Avancadas", padding="10")
+        self.advanced_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Checkbutton(
             self.advanced_frame,
@@ -383,8 +440,8 @@ class SanitizerGUI:
             variable=self.preserve_structure
         ).pack(anchor=tk.W, pady=2)
 
-        self.stats_frame = ttk.LabelFrame(options_frame, text="Estatisticas", padding="10")
-        self.stats_frame.pack(fill=tk.X, pady=5)
+        self.stats_frame = ttk.LabelFrame(self.scrollable_frame, text="Estatisticas", padding="10")
+        self.stats_frame.pack(fill=tk.X, pady=5, padx=5)
 
         self.stats_label = ttk.Label(
             self.stats_frame,
@@ -404,9 +461,16 @@ Exemplo:
 [2024-01-15 10:33] Email sent to support@example.com from fe80::1
 """)
 
+        self.scrollable_frame.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_mousewheel(self, event):
+        if self.canvas.winfo_containing(event.x_root, event.y_root) == self.canvas:
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
     def on_theme_change(self, event=None):
         theme_name = self.current_theme.get()
         self.apply_theme(theme_name)
+        self.save_config()
 
     def apply_theme(self, theme_name: str):
         theme = ColorTheme.THEMES.get(theme_name, ColorTheme.THEMES['Azul'])
@@ -428,6 +492,9 @@ Exemplo:
         self.input_text.configure(bg=theme['text_bg'], fg=theme['text_fg'], insertbackground=theme['text_fg'])
         self.output_text.configure(bg=theme['text_bg'], fg=theme['text_fg'], insertbackground=theme['text_fg'])
         self.clients_listbox.configure(bg=theme['text_bg'], fg=theme['text_fg'])
+
+        if hasattr(self, 'canvas'):
+            self.canvas.configure(bg=theme['bg'])
 
     def select_all(self):
         self.sanitize_email.set(True)
@@ -453,6 +520,7 @@ Exemplo:
             self.custom_clients_list.append(client_name)
             self.clients_listbox.insert(tk.END, client_name)
             self.client_entry.delete(0, tk.END)
+            self.save_config()
         elif client_name in self.custom_clients_list:
             messagebox.showinfo("Info", "Este nome ja esta na lista!")
 
@@ -463,6 +531,7 @@ Exemplo:
             client_name = self.clients_listbox.get(index)
             self.clients_listbox.delete(index)
             self.custom_clients_list.remove(client_name)
+            self.save_config()
 
     def sanitize_custom_clients_in_text(self, text: str) -> str:
         if not self.custom_clients_list:
@@ -499,6 +568,7 @@ Exemplo:
             )
             return
 
+        from sanitize_soc_logs import SOCLogSanitizer
         sanitizer = SOCLogSanitizer(
             use_hash=self.use_hash.get(),
             preserve_structure=self.preserve_structure.get()
