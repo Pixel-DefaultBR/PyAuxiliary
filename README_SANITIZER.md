@@ -46,9 +46,38 @@ from sanitize_soc_logs import sanitize_log_file
 sanitize_log_file("input.log", "output_sanitized.log")
 ```
 
+### Interface Gráfica (Recomendado) 🖥️
+
+**Forma mais fácil de usar!** Execute a interface gráfica para sanitizar textos de forma visual:
+
+```bash
+python3 sanitizer_gui.py
+```
+
+**Recursos da Interface Gráfica:**
+- 📝 Áreas de texto para entrada e saída
+- ✅ Checkboxes para selecionar o que sanitizar
+- 🏢 **Campo para adicionar nomes de clientes personalizados**
+- 📋 **Botão para copiar resultado para área de transferência**
+- 💾 Carregar e salvar arquivos
+- 📊 Estatísticas em tempo real
+- ⚙️ Opções avançadas (hash, preservar estrutura)
+
+![GUI Features](https://via.placeholder.com/800x600.png?text=Interface+Gr%C3%A1fica+do+Sanitizador)
+
+**Como usar a GUI:**
+1. Cole ou carregue o texto que deseja sanitizar
+2. Marque os checkboxes do que deseja remover
+3. Adicione nomes específicos de clientes na lista personalizada
+4. Clique em "Sanitizar Texto"
+5. Copie o resultado ou salve em arquivo
+
 ### Linha de comando
 
 ```bash
+# Executar interface gráfica (recomendado)
+python3 sanitizer_gui.py
+
 # Executar exemplos demonstrativos
 python3 sanitize_soc_logs.py
 
@@ -56,7 +85,7 @@ python3 sanitize_soc_logs.py
 python3 test_sanitizer.py
 ```
 
-## 🔧 Uso Avançado
+## 🔧 Uso Avançado (Programático)
 
 ### Modo com Hash (para consistência)
 
@@ -304,6 +333,105 @@ sanitizer = SOCLogSanitizer(use_hash=False, preserve_structure=True)
 sanitizer.sanitize_file("real_incidents.log", "test_fixtures.log")
 ```
 
+## 🖥️ Interface Gráfica - Guia Completo
+
+### Características da GUI
+
+A interface gráfica (`sanitizer_gui.py`) oferece uma experiência completa e intuitiva:
+
+#### 1. **Área de Texto**
+- Entrada: Cole ou carregue qualquer texto (logs, emails, documentos)
+- Saída: Visualize o resultado sanitizado em tempo real
+- Suporte para arquivos grandes
+
+#### 2. **Opções de Sanitização (Checkboxes)**
+Selecione exatamente o que deseja sanitizar:
+- ✉️ Endereços de Email
+- 🌐 Endereços IPv4
+- 🌐 Endereços IPv6
+- 🔗 Domínios
+- 👤 Nomes de Usuários
+- 🏢 Nomes de Clientes (padrão)
+- 📝 Nomes de Clientes (customizados)
+
+Atalhos: Botões "✓ Todos" e "✗ Nenhum" para facilitar seleção
+
+#### 3. **Clientes/Termos Personalizados** ⭐
+Campo especial para adicionar nomes específicos:
+- Adicione nome de clientes reais da sua empresa
+- Adicione termos específicos que deseja remover
+- Lista editável (adicionar/remover itens)
+- Case-insensitive (maiúsculas/minúsculas)
+
+**Exemplo de uso:**
+```
+Adicione à lista:
+- "Empresa XYZ Ltda"
+- "Cliente ABC"
+- "Projeto Confidencial"
+
+O sanitizador removerá todas as ocorrências desses termos!
+```
+
+#### 4. **Opções Avançadas**
+- 🔐 **Usar Hash**: Garante consistência nas substituições
+- 📐 **Preservar Estrutura**: Mantém formato dos dados (IPs, emails)
+
+#### 5. **Ações Rápidas**
+- 🔒 **Sanitizar Texto**: Processa o texto com as opções selecionadas
+- 📋 **Copiar para Área de Transferência**: Copia resultado instantaneamente
+- 💾 **Salvar em Arquivo**: Exporta resultado para arquivo
+- 📂 **Carregar Arquivo**: Importa arquivo para sanitizar
+- 🗑️ **Limpar Tudo**: Reset completo
+
+#### 6. **Estatísticas**
+Visualize em tempo real:
+- Quantos itens de cada tipo foram sanitizados
+- Total de substituições realizadas
+- Contadores por categoria
+
+### Casos de Uso da GUI
+
+#### Caso 1: Sanitizar Email para Cliente
+```
+Situação: Precisa enviar logs para cliente externo
+Ação:
+1. Carregue o arquivo de log
+2. Adicione nome da sua empresa na lista personalizada
+3. Marque todos os checkboxes
+4. Clique "Sanitizar"
+5. Clique "Copiar para Área de Transferência"
+6. Cole no email
+```
+
+#### Caso 2: Preparar Dados para Treinamento
+```
+Situação: Criar material de treinamento sem dados reais
+Ação:
+1. Cole o conteúdo no campo de entrada
+2. Adicione nomes de clientes reais na lista
+3. Mantenha "Preservar Estrutura" marcado
+4. Sanitize e salve o arquivo
+```
+
+#### Caso 3: Conformidade LGPD
+```
+Situação: Remover dados pessoais de logs antigos
+Ação:
+1. Carregue arquivo antigo
+2. Marque apenas: Emails, Usernames, Custom Clients
+3. Adicione nomes de pessoas na lista personalizada
+4. Sanitize e salve
+```
+
+### Dicas de Uso da GUI
+
+💡 **Dica 1**: Use a lista personalizada para termos específicos da sua organização
+💡 **Dica 2**: Ative "Usar Hash" para manter consistência em análises
+💡 **Dica 3**: Sempre revise o resultado antes de compartilhar
+💡 **Dica 4**: Salve configurações frequentes como templates
+💡 **Dica 5**: A GUI funciona com QUALQUER texto, não apenas logs
+
 ## 🤝 Contribuindo
 
 Contribuições são bem-vindas! Áreas para melhoria:
@@ -311,8 +439,9 @@ Contribuições são bem-vindas! Áreas para melhoria:
 - Adicionar mais padrões (números de telefone, CPF/CNPJ, etc)
 - Suporte para formatos de log específicos (syslog, JSON, etc)
 - Performance para arquivos muito grandes
-- Interface CLI mais robusta
+- Salvar/carregar configurações da GUI
 - Testes unitários com pytest
+- Modo batch para múltiplos arquivos
 
 ## 📄 Licença
 
